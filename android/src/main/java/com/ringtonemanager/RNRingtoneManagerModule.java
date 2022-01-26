@@ -37,9 +37,11 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
 
     final static class SettingsKeys {
         public static final String URI = "uri";
-        public static final String IS_RINGTONE = "IS_RINGTONE";
-        public static final String IS_NOTIFICATION = "IS_NOTIFICATION";
-        public static final String IS_ALARM = "IS_ALARM";
+        public static final String TITLE = "title";
+        public static final String ARTIST = "artist";
+        public static final String IS_RINGTONE = "IsRingtone";
+        public static final String IS_NOTIFICATION = "IsNotification";
+        public static final String IS_ALARM = "IsAlarm";
     }
 
     public RNRingtoneManagerModule(ReactApplicationContext reactContext) {
@@ -54,8 +56,16 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void getRingtone(int ringtoneType, Callback successCallback) {
-        Uri uri = RingtoneManager.getActualDefaultRingtoneUri(this.reactContext, ringtoneType);
-        successCallback.invoke(uri);
+        Uri ringtoneUri = RingtoneManager.getActualDefaultRingtoneUri(this.reactContext, ringtoneType);
+
+        Cursor musicCursor = this.reactContext.getContentResolver().query(ringtoneUri, new String[] { MediaStore.Audio.Media.TITLE }, null, null, null);
+        if (musicCursor != null && musicCursor.moveToFirst()) {
+            String title = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE));
+
+            successCallback.invoke(title);
+        }else{
+            successCallback.invoke(ringtoneUri.getPath());
+        }
     }
 
     @ReactMethod
@@ -112,13 +122,13 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
             ContentValues values = new ContentValues();
             values.put(MediaStore.MediaColumns.DATA, ringtoneFile.getAbsolutePath());
             values.put(MediaStore.MediaColumns.SIZE, ringtoneFile.length());
-            values.put(MediaStore.MediaColumns.TITLE, ringtoneTitle);
-            values.put(MediaStore.Audio.Media.ARTIST, ringtoneArtist);
+            values.put(MediaStore.MediaColumns.TITLE, settings.getString(SettingsKeys.TITLE));
+            values.put(MediaStore.Audio.Media.ARTIST, settings.getString(SettingsKeys.ARTIST));
             values.put(MediaStore.Audio.Media.DURATION, ringtoneDuration);
             values.put(MediaStore.MediaColumns.MIME_TYPE, ringtoneMime_type);
-            values.put(MediaStore.Audio.Media.IS_RINGTONE, settings.getBoolean(SettingsKeys.IS_RINGTONE));
-            values.put(MediaStore.Audio.Media.IS_NOTIFICATION, settings.getBoolean(SettingsKeys.IS_NOTIFICATION));
-            values.put(MediaStore.Audio.Media.IS_ALARM, settings.getBoolean(SettingsKeys.IS_ALARM));
+            values.put(MediaStore.Audio.Media.IS_RINGTONE, true);
+            values.put(MediaStore.Audio.Media.IS_NOTIFICATION, true);
+            values.put(MediaStore.Audio.Media.IS_ALARM, true);
             values.put(MediaStore.Audio.Media.IS_MUSIC, false);
 
             if (ringtoneFile.exists() && getCurrentActivity() != null) {
@@ -130,7 +140,20 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
 
                 Uri newUri = this.reactContext.getContentResolver().insert(uri, values);
 
-                RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_RINGTONE, newUri);
+                boolean ringtoneIsRingtone = settings.getBoolean(SettingsKeys.IS_RINGTONE);
+                boolean ringtoneIsNotification = settings.getBoolean(SettingsKeys.IS_NOTIFICATION);
+                boolean ringtoneIsAlarm = settings.getBoolean(SettingsKeys.IS_ALARM);
+
+                if(ringtoneIsRingtone){
+                    RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_RINGTONE, newUri);
+                }
+                if(ringtoneIsNotification){
+                    RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_NOTIFICATION, newUri);
+                }
+                if(ringtoneIsAlarm){
+                    RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_ALARM, newUri);
+                }
+
                 successCallback.invoke(true);
             }else{
                 successCallback.invoke(false, "Invalid Uri");
