@@ -56,15 +56,19 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void getRingtone(int ringtoneType, Callback successCallback) {
-        Uri ringtoneUri = RingtoneManager.getActualDefaultRingtoneUri(this.reactContext, ringtoneType);
+        try{
+            Uri ringtoneUri = RingtoneManager.getActualDefaultRingtoneUri(this.reactContext, ringtoneType);
 
-        Cursor musicCursor = this.reactContext.getContentResolver().query(ringtoneUri, new String[] { MediaStore.Audio.Media.TITLE }, null, null, null);
-        if (musicCursor != null && musicCursor.moveToFirst()) {
-            String title = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE));
+            Cursor musicCursor = this.reactContext.getContentResolver().query(ringtoneUri, new String[] { MediaStore.Audio.Media.TITLE }, null, null, null);
+            if (musicCursor != null && musicCursor.moveToFirst()) {
+                String title = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE));
 
-            successCallback.invoke(title);
-        }else{
-            successCallback.invoke(ringtoneUri.getPath());
+                successCallback.invoke(title);
+            }else{
+                successCallback.invoke(ringtoneUri.getPath());
+            }
+        }catch(Exception e){
+            successCallback.invoke("");
         }
     }
 
@@ -80,22 +84,24 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
                 if (musicCursor != null && musicCursor.moveToFirst()) {
                     while (musicCursor.moveToNext()) {
 
-                        String uri = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
+                        try{
+                            String uri = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
 
-                        MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-                        mediaMetadataRetriever.setDataSource(uri);
+                            MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+                            mediaMetadataRetriever.setDataSource(uri);
 
-                        int id = musicCursor.getColumnIndex(MediaStore.Audio.Media._ID);
-                        String title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-                        String artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                            int id = musicCursor.getColumnIndex(MediaStore.Audio.Media._ID);
+                            String title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+                            String artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
 
-                        WritableMap data = Arguments.createMap();
-                        data.putInt("id", id);
-                        data.putString("title", title);
-                        data.putString("artist", artist);
-                        data.putString("uri", uri);
+                            WritableMap data = Arguments.createMap();
+                            data.putInt("id", id);
+                            data.putString("title", title);
+                            data.putString("artist", artist);
+                            data.putString("uri", uri);
 
-                        result.pushMap(data);
+                            result.pushMap(data);
+                        }catch(Exception ignored){}
                     }
                 }
             }
@@ -114,39 +120,69 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
             mediaMetadataRetriever.setDataSource(ringtoneFile.getAbsolutePath());
 
-            String ringtoneTitle = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-            String ringtoneArtist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
-            String ringtoneDuration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            String ringtoneMime_type = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE);
-
-            ContentValues values = new ContentValues();
-            values.put(MediaStore.MediaColumns.DATA, ringtoneFile.getAbsolutePath());
-            values.put(MediaStore.MediaColumns.SIZE, ringtoneFile.length());
-            values.put(MediaStore.MediaColumns.TITLE, settings.getString(SettingsKeys.TITLE));
-            values.put(MediaStore.Audio.Media.ARTIST, settings.getString(SettingsKeys.ARTIST));
-            values.put(MediaStore.Audio.Media.DURATION, ringtoneDuration);
-            values.put(MediaStore.MediaColumns.MIME_TYPE, ringtoneMime_type);
-            values.put(MediaStore.Audio.Media.IS_RINGTONE, true);
-            values.put(MediaStore.Audio.Media.IS_NOTIFICATION, true);
-            values.put(MediaStore.Audio.Media.IS_ALARM, true);
-            values.put(MediaStore.Audio.Media.IS_MUSIC, false);
-
             if (ringtoneFile.exists() && getCurrentActivity() != null) {
-                Uri uri = MediaStore.Audio.Media.getContentUriForPath(ringtoneFile.getAbsolutePath());
-                Uri newUri = this.reactContext.getContentResolver().insert(uri, values);
 
+                String ringtoneTitle = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+                String ringtoneArtist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                String ringtoneDuration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                String ringtoneMime_type = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE);
                 boolean ringtoneIsRingtone = settings.getBoolean(SettingsKeys.IS_RINGTONE);
                 boolean ringtoneIsNotification = settings.getBoolean(SettingsKeys.IS_NOTIFICATION);
                 boolean ringtoneIsAlarm = settings.getBoolean(SettingsKeys.IS_ALARM);
 
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DATA, ringtoneFile.getAbsolutePath());
+                values.put(MediaStore.MediaColumns.SIZE, ringtoneFile.length());
+                values.put(MediaStore.MediaColumns.TITLE, settings.getString(SettingsKeys.TITLE)+" ("+ringtoneTitle+" - "+ringtoneArtist+")");
+                values.put(MediaStore.Audio.Media.ARTIST, settings.getString(SettingsKeys.ARTIST));
+                values.put(MediaStore.Audio.Media.DURATION, ringtoneDuration);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, ringtoneMime_type);
+                values.put(MediaStore.Audio.Media.IS_RINGTONE, ringtoneIsRingtone);
+                values.put(MediaStore.Audio.Media.IS_NOTIFICATION, ringtoneIsNotification);
+                values.put(MediaStore.Audio.Media.IS_ALARM, ringtoneIsAlarm);
+                values.put(MediaStore.Audio.Media.IS_MUSIC, false);
+
+                Uri uri = MediaStore.Audio.Media.getContentUriForPath(ringtoneFile.getAbsolutePath());
+                Uri newUri = null;
+
                 if(ringtoneIsRingtone){
-                    RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_RINGTONE, newUri);
+                    try{
+                        this.reactContext.getContentResolver().delete(uri,MediaStore.MediaColumns.DATA + "=?", new String[]{ringtoneFile.getAbsolutePath()});
+                    }catch(Exception ignored){}
+
+                    newUri = this.reactContext.getContentResolver().insert(uri, values);
+
+                    if(newUri!=null) {
+                        RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_RINGTONE, newUri);
+                    }
                 }
+
                 if(ringtoneIsNotification){
-                    RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_NOTIFICATION, newUri);
+                    if(!ringtoneIsRingtone){
+                        try{
+                            this.reactContext.getContentResolver().delete(uri,MediaStore.MediaColumns.DATA + "=?", new String[]{ringtoneFile.getAbsolutePath()});
+                        }catch(Exception ignored){}
+
+                        newUri = this.reactContext.getContentResolver().insert(uri, values);
+                    }
+
+                    if(newUri!=null) {
+                        RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_NOTIFICATION, newUri);
+                    }
                 }
+
                 if(ringtoneIsAlarm){
-                    RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_ALARM, newUri);
+                    if(!ringtoneIsRingtone && !ringtoneIsNotification){
+                        try{
+                            this.reactContext.getContentResolver().delete(uri,MediaStore.MediaColumns.DATA + "=?", new String[]{ringtoneFile.getAbsolutePath()});
+                        }catch(Exception ignored){}
+
+                        newUri = this.reactContext.getContentResolver().insert(uri, values);
+                    }
+
+                    if(newUri!=null) {
+                        RingtoneManager.setActualDefaultRingtoneUri(this.reactContext, RingtoneManager.TYPE_ALARM, newUri);
+                    }
                 }
 
                 successCallback.invoke(true);
