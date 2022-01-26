@@ -133,11 +133,6 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
 
             if (ringtoneFile.exists() && getCurrentActivity() != null) {
                 Uri uri = MediaStore.Audio.Media.getContentUriForPath(ringtoneFile.getAbsolutePath());
-
-                try{
-                    this.reactContext.getContentResolver().delete(uri,MediaStore.MediaColumns.DATA + "=?", new String[]{ringtoneFile.getAbsolutePath()});
-                }catch(Exception ignored){}
-
                 Uri newUri = this.reactContext.getContentResolver().insert(uri, values);
 
                 boolean ringtoneIsRingtone = settings.getBoolean(SettingsKeys.IS_RINGTONE);
