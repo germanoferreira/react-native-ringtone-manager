@@ -59,16 +59,23 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
         try{
             Uri ringtoneUri = RingtoneManager.getActualDefaultRingtoneUri(this.reactContext, ringtoneType);
 
-            Cursor musicCursor = this.reactContext.getContentResolver().query(ringtoneUri, new String[] { MediaStore.Audio.Media.TITLE }, null, null, null);
+            Cursor musicCursor = this.reactContext.getContentResolver().query(ringtoneUri, new String[] { MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM }, null, null, null);
             if (musicCursor != null && musicCursor.moveToFirst()) {
                 String title = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE));
+                String artist = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST));
+                String album = musicCursor.getString(musicCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM));
 
-                successCallback.invoke(title);
+                WritableMap result = Arguments.createMap();
+                result.putString("title", title);
+                result.putString("artist", artist);
+                result.putString("album", album);
+
+                successCallback.invoke(result);
             }else{
                 successCallback.invoke(ringtoneUri.getPath());
             }
         }catch(Exception e){
-            successCallback.invoke("");
+            successCallback.invoke(e.getMessage());
         }
     }
 
@@ -90,12 +97,10 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
                             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
                             mediaMetadataRetriever.setDataSource(uri);
 
-                            int id = musicCursor.getColumnIndex(MediaStore.Audio.Media._ID);
                             String title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
                             String artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
 
                             WritableMap data = Arguments.createMap();
-                            data.putInt("id", id);
                             data.putString("title", title);
                             data.putString("artist", artist);
                             data.putString("uri", uri);
@@ -133,8 +138,9 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DATA, ringtoneFile.getAbsolutePath());
                 values.put(MediaStore.MediaColumns.SIZE, ringtoneFile.length());
-                values.put(MediaStore.MediaColumns.TITLE, settings.getString(SettingsKeys.TITLE)+" ("+ringtoneTitle+" - "+ringtoneArtist+")");
-                values.put(MediaStore.Audio.Media.ARTIST, settings.getString(SettingsKeys.ARTIST));
+                values.put(MediaStore.MediaColumns.TITLE, ringtoneTitle);
+                values.put(MediaStore.Audio.Media.ARTIST, ringtoneArtist);
+                values.put(MediaStore.Audio.Media.ALBUM, "Troca Toque");
                 values.put(MediaStore.Audio.Media.DURATION, ringtoneDuration);
                 values.put(MediaStore.MediaColumns.MIME_TYPE, ringtoneMime_type);
                 values.put(MediaStore.Audio.Media.IS_RINGTONE, ringtoneIsRingtone);
