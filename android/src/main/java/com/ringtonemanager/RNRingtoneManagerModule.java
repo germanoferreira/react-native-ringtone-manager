@@ -125,7 +125,7 @@ public class RNRingtoneManagerModule extends ReactContextBaseJavaModule {
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
             mediaMetadataRetriever.setDataSource(ringtoneFile.getAbsolutePath());
 
-            if (ringtoneFile.exists() && getCurrentActivity() != null) {
+            if (ringtoneFile.exists()) {
 
                 String ringtoneTitle = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
                 String ringtoneArtist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
